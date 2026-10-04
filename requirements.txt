@@ -3,17 +3,17 @@
 # de expor o módulo `langchain.hub`, cujo papel (pull/push de prompts) passou a ser
 # do cliente do LangSmith. Aqui usamos apenas o core, que traz ChatPromptTemplate,
 # as mensagens e a composição de chains com o operador `|`.
-langchain-core==1.6.4
+langchain-core==1.6.6
 
 # LangSmith: Prompt Hub, tracing, datasets e avaliação
-langsmith==0.13.0
+langsmith==0.14.4
 
 # Providers de LLM
-langchain-openai==1.6.2
+langchain-openai==1.6.7
 langchain-google-genai==4.4.0
 
 # Utilitários
-python-dotenv==1.2.3
+python-dotenv==1.2.4
 pyyaml==6.0.3
 pydantic==2.13.5
 
