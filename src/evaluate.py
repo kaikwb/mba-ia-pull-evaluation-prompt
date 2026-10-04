@@ -25,7 +25,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 from langsmith import Client
 from langchain_core.prompts import ChatPromptTemplate
-from utils import check_env_vars, format_score, print_section_header, get_llm as get_configured_llm
+from utils import (
+    check_env_vars,
+    format_score,
+    print_section_header,
+    get_llm as get_configured_llm,
+)
 from metrics import evaluate_f1_score, evaluate_clarity, evaluate_precision
 
 load_dotenv()
@@ -45,7 +50,7 @@ def load_dataset_from_jsonl(jsonl_path: str) -> List[Dict[str, Any]]:
     examples = []
 
     try:
-        with open(jsonl_path, 'r', encoding='utf-8') as f:
+        with open(jsonl_path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:  # Ignorar linhas vazias
@@ -56,7 +61,9 @@ def load_dataset_from_jsonl(jsonl_path: str) -> List[Dict[str, Any]]:
 
     except FileNotFoundError:
         print(f"❌ Arquivo não encontrado: {jsonl_path}")
-        print("\nCertifique-se de que o arquivo datasets/bug_to_user_story.jsonl existe.")
+        print(
+            "\nCertifique-se de que o arquivo datasets/bug_to_user_story.jsonl existe."
+        )
         return []
     except json.JSONDecodeError as e:
         print(f"❌ Erro ao parsear JSONL: {e}")
@@ -66,7 +73,9 @@ def load_dataset_from_jsonl(jsonl_path: str) -> List[Dict[str, Any]]:
         return []
 
 
-def create_evaluation_dataset(client: Client, dataset_name: str, jsonl_path: str) -> str:
+def create_evaluation_dataset(
+    client: Client, dataset_name: str, jsonl_path: str
+) -> str:
     print(f"Criando dataset de avaliação: {dataset_name}...")
 
     examples = load_dataset_from_jsonl(jsonl_path)
@@ -90,7 +99,7 @@ def create_evaluation_dataset(client: Client, dataset_name: str, jsonl_path: str
             client.create_example(
                 dataset_id=dataset.id,
                 inputs=example["inputs"],
-                outputs=example["outputs"]
+                outputs=example["outputs"],
             )
 
         print(f"   ✓ Dataset criado com {len(examples)} exemplos")
@@ -163,7 +172,9 @@ def build_target(prompt_template: ChatPromptTemplate, llm: Any):
     return target
 
 
-def evaluate_all_metrics(inputs: dict, outputs: dict, reference_outputs: dict) -> Dict[str, Any]:
+def evaluate_all_metrics(
+    inputs: dict, outputs: dict, reference_outputs: dict
+) -> Dict[str, Any]:
     """
     Avaliador do LangSmith: roda os três juízes uma única vez por exemplo e
     devolve as 5 métricas de uma vez.
@@ -273,13 +284,23 @@ def display_results(prompt_name: str, scores: Dict[str, float]) -> bool:
     print("=" * 50)
 
     print("\nMétricas Derivadas:")
-    print(f"  - Helpfulness: {format_score(scores['helpfulness'], threshold=APPROVAL_THRESHOLD)}")
-    print(f"  - Correctness: {format_score(scores['correctness'], threshold=APPROVAL_THRESHOLD)}")
+    print(
+        f"  - Helpfulness: {format_score(scores['helpfulness'], threshold=APPROVAL_THRESHOLD)}"
+    )
+    print(
+        f"  - Correctness: {format_score(scores['correctness'], threshold=APPROVAL_THRESHOLD)}"
+    )
 
     print("\nMétricas Base:")
-    print(f"  - F1-Score: {format_score(scores['f1_score'], threshold=APPROVAL_THRESHOLD)}")
-    print(f"  - Clarity: {format_score(scores['clarity'], threshold=APPROVAL_THRESHOLD)}")
-    print(f"  - Precision: {format_score(scores['precision'], threshold=APPROVAL_THRESHOLD)}")
+    print(
+        f"  - F1-Score: {format_score(scores['f1_score'], threshold=APPROVAL_THRESHOLD)}"
+    )
+    print(
+        f"  - Clarity: {format_score(scores['clarity'], threshold=APPROVAL_THRESHOLD)}"
+    )
+    print(
+        f"  - Precision: {format_score(scores['precision'], threshold=APPROVAL_THRESHOLD)}"
+    )
 
     average_score = sum(scores.values()) / len(scores)
 
@@ -294,10 +315,16 @@ def display_results(prompt_name: str, scores: Dict[str, float]) -> bool:
         print(f"\n✅ STATUS: APROVADO - Todas as métricas >= {APPROVAL_THRESHOLD}")
     else:
         print(f"\n❌ STATUS: REPROVADO")
-        failed_metrics = [name for name, score in scores.items() if score < APPROVAL_THRESHOLD]
+        failed_metrics = [
+            name for name, score in scores.items() if score < APPROVAL_THRESHOLD
+        ]
         if failed_metrics:
-            print(f"⚠️  Métricas abaixo de {APPROVAL_THRESHOLD}: {', '.join(failed_metrics)}")
-        print(f"⚠️  Média atual: {average_score:.4f} | Necessário: {APPROVAL_THRESHOLD:.4f}")
+            print(
+                f"⚠️  Métricas abaixo de {APPROVAL_THRESHOLD}: {', '.join(failed_metrics)}"
+            )
+        print(
+            f"⚠️  Média atual: {average_score:.4f} | Necessário: {APPROVAL_THRESHOLD:.4f}"
+        )
 
     return passed
 
@@ -363,23 +390,27 @@ def main():
             passed = display_results(prompt_name, scores)
             all_passed = all_passed and passed
 
-            results_summary.append({
-                "prompt": prompt_name,
-                "scores": scores,
-                "passed": passed,
-                "url": experiment_url,
-            })
+            results_summary.append(
+                {
+                    "prompt": prompt_name,
+                    "scores": scores,
+                    "passed": passed,
+                    "url": experiment_url,
+                }
+            )
 
         except Exception as e:
             print(f"\n❌ Falha ao avaliar '{prompt_name}': {e}")
             all_passed = False
 
-            results_summary.append({
-                "prompt": prompt_name,
-                "scores": {key: 0.0 for key in METRIC_KEYS},
-                "passed": False,
-                "url": None,
-            })
+            results_summary.append(
+                {
+                    "prompt": prompt_name,
+                    "scores": {key: 0.0 for key in METRIC_KEYS},
+                    "passed": False,
+                    "url": None,
+                }
+            )
 
     print("\n" + "=" * 50)
     print("RESUMO FINAL")
@@ -396,14 +427,18 @@ def main():
             print(f"    {result['url']}")
 
     if all_passed:
-        print(f"\n✅ Todos os prompts atingiram todas as métricas >= {APPROVAL_THRESHOLD}!")
+        print(
+            f"\n✅ Todos os prompts atingiram todas as métricas >= {APPROVAL_THRESHOLD}!"
+        )
         print("\nPróximos passos:")
         print("1. Documente o processo no README.md")
         print("2. Capture screenshots das avaliações")
         print("3. Faça commit e push para o GitHub")
         return 0
     else:
-        print(f"\n⚠️  Alguns prompts não atingiram todas as métricas >= {APPROVAL_THRESHOLD}")
+        print(
+            f"\n⚠️  Alguns prompts não atingiram todas as métricas >= {APPROVAL_THRESHOLD}"
+        )
         print("\nPróximos passos:")
         print("1. Refatore os prompts com score baixo")
         print("2. Faça push novamente: python src/push_prompts.py")

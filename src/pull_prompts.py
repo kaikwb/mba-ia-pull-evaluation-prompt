@@ -39,8 +39,7 @@ from utils import save_yaml, check_env_vars, print_section_header
 load_dotenv()
 
 
-def pull_prompts_from_langsmith():
-    ...
+def pull_prompts_from_langsmith(): ...
 
 
 def main():

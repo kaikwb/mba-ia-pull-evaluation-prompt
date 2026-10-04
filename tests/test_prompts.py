@@ -1,6 +1,7 @@
 """
 Testes automatizados para validação de prompts.
 """
+
 import pytest
 import yaml
 import sys
@@ -11,10 +12,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from utils import validate_prompt_structure
 
+
 def load_prompts(file_path: str):
     """Carrega prompts do arquivo YAML."""
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
+
 
 class TestPrompts:
     def test_prompt_has_system_prompt(self):
@@ -40,6 +43,7 @@ class TestPrompts:
     def test_minimum_techniques(self):
         """Verifica (através dos metadados do yaml) se pelo menos 2 técnicas foram listadas."""
         pass
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
