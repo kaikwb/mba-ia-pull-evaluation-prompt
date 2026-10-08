@@ -41,7 +41,7 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langsmith import Client
 from langsmith.utils import LangSmithError
 
@@ -146,18 +146,16 @@ def validate_prompt(prompt_data: dict) -> tuple[bool, list]:
         return False, structure_errors
 
     try:
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", prompt_data["system_prompt"]),
-                ("human", prompt_data["user_prompt"]),
-            ]
-        )
+        system_variables = PromptTemplate.from_template(
+            prompt_data["system_prompt"]
+        ).input_variables
+        user_variables = PromptTemplate.from_template(
+            prompt_data["user_prompt"]
+        ).input_variables
     except (TypeError, ValueError):
         return False, ["Prompt messages could not be parsed"]
 
-    system_variables = prompt.messages[0].prompt.input_variables
-    user_variables = prompt.messages[1].prompt.input_variables
-    if prompt.input_variables != ["bug_report"]:
+    if system_variables or user_variables != ["bug_report"]:
         errors.append("Template must use exactly the bug_report input variable")
     if "bug_report" not in user_variables or "bug_report" in system_variables:
         errors.append(

@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 import yaml
+from langchain_core.messages import AIMessage
 from langchain_google_genai.chat_models import (
     ChatGoogleGenerativeAIError,
     GoogleRateLimitError,
@@ -65,9 +66,30 @@ def test_clarity_metric_does_not_swallow_unexpected_errors():
 
 def test_clarity_metric_handles_null_score_response():
     llm = Mock()
-    llm.invoke.return_value.content = '{"score": null}'
+    llm.invoke.return_value = AIMessage(content='{"score": null}')
 
     with patch.object(metrics, "get_evaluator_llm", return_value=llm):
         assert metrics.evaluate_clarity("question", "answer", "reference")[
             "score"
         ] == 0.0
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        '{"score": 0.7}',
+        [
+            {"type": "text", "text": '{"score": 0.7}'},
+            {"type": "image", "url": "ignored"},
+        ],
+    ],
+    ids=["string-content", "text-block-with-nontext-block"],
+)
+def test_clarity_metric_extracts_score_from_ai_message_text(content):
+    llm = Mock()
+    llm.invoke.return_value = AIMessage(content=content)
+
+    with patch.object(metrics, "get_evaluator_llm", return_value=llm):
+        assert metrics.evaluate_clarity("question", "answer", "reference")[
+            "score"
+        ] == 0.7

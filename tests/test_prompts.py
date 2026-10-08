@@ -17,7 +17,7 @@ from utils import validate_prompt_structure
 PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "bug_to_user_story_v2.yml"
 
 
-def load_prompts(file_path: str):
+def load_prompts(file_path: str | Path):
     """Carrega prompts do arquivo YAML."""
     with open(file_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)

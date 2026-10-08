@@ -36,6 +36,7 @@ from dotenv import load_dotenv
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
+    PromptTemplate,
     SystemMessagePromptTemplate,
 )
 from langsmith import Client
@@ -55,19 +56,27 @@ OUTPUT_PATH = (
 def pull_prompts_from_langsmith() -> bool:
     try:
         prompt = Client().pull_prompt(PROMPT_NAME, dangerously_pull_public_prompt=True)
-        if (
-            not isinstance(prompt, ChatPromptTemplate)
-            or len(prompt.messages) != 2
-            or not isinstance(prompt.messages[0], SystemMessagePromptTemplate)
-            or not isinstance(prompt.messages[1], HumanMessagePromptTemplate)
-        ):
+        if not isinstance(prompt, ChatPromptTemplate) or len(prompt.messages) != 2:
             print("❌ Unsupported prompt message structure.")
             return False
 
-        system_template, user_template = [message.prompt for message in prompt.messages]
+        system_message = prompt.messages[0]
+        user_message = prompt.messages[1]
+        if not isinstance(
+            system_message, SystemMessagePromptTemplate
+        ) or not isinstance(user_message, HumanMessagePromptTemplate):
+            print("❌ Unsupported prompt message structure.")
+            return False
+
+        system_template = system_message.prompt
+        user_template = user_message.prompt
+        if not isinstance(system_template, PromptTemplate) or not isinstance(
+            user_template, PromptTemplate
+        ):
+            print("❌ Unsupported prompt message structure.")
+            return False
         if any(
             template.template_format != "f-string"
-            or not isinstance(template.template, str)
             or template.partial_variables
             for template in (system_template, user_template)
         ):
