@@ -216,6 +216,9 @@ def get_llm(model: str | None = None, temperature: float = 0.0):
 
     elif provider == "google":
         from langchain_google_genai import ChatGoogleGenerativeAI
+        from langchain_google_genai.chat_models import (
+            _uses_fixed_sampling_and_disallows_prefill,
+        )
 
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
@@ -223,6 +226,9 @@ def get_llm(model: str | None = None, temperature: float = 0.0):
                 "GOOGLE_API_KEY não configurada no .env\n"
                 "Obtenha uma chave em: https://aistudio.google.com/app/apikey"
             )
+
+        if _uses_fixed_sampling_and_disallows_prefill(model_name):
+            return ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key)
 
         return ChatGoogleGenerativeAI(
             model=model_name, temperature=temperature, google_api_key=api_key
