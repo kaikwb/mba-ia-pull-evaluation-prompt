@@ -17,21 +17,30 @@ consultando a documentação oficial do provider escolhido.
 Configure o provider no arquivo .env através da variável LLM_PROVIDER.
 """
 
+import json
 import os
 import sys
-import json
-from typing import List, Dict, Any
 from pathlib import Path
+from typing import Any
+
 from dotenv import load_dotenv
-from langsmith import Client
+from google.genai.errors import APIError as GoogleAPIError
+from langchain_core.exceptions import LangChainException
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_google_genai.chat_models import ChatGoogleGenerativeAIError
+from langsmith import Client
+from langsmith.utils import LangSmithError
+from openai import OpenAIError
+
+from metrics import evaluate_clarity, evaluate_f1_score, evaluate_precision
 from utils import (
     check_env_vars,
     format_score,
     print_section_header,
+)
+from utils import (
     get_llm as get_configured_llm,
 )
-from metrics import evaluate_f1_score, evaluate_clarity, evaluate_precision
 
 load_dotenv()
 
@@ -46,7 +55,7 @@ def get_llm():
     return get_configured_llm(temperature=0)
 
 
-def load_dataset_from_jsonl(jsonl_path: str) -> List[Dict[str, Any]]:
+def load_dataset_from_jsonl(jsonl_path: str) -> list[dict[str, Any]]:
     examples = []
 
     try:
@@ -68,7 +77,7 @@ def load_dataset_from_jsonl(jsonl_path: str) -> List[Dict[str, Any]]:
     except json.JSONDecodeError as e:
         print(f"❌ Erro ao parsear JSONL: {e}")
         return []
-    except Exception as e:
+    except (OSError, UnicodeError) as e:
         print(f"❌ Erro ao carregar dataset: {e}")
         return []
 
@@ -106,7 +115,7 @@ def create_evaluation_dataset(
         print(f"   ✓ {dataset.url}")
         return dataset_name
 
-    except Exception as e:
+    except LangSmithError as e:
         print(f"   ⚠️  Erro ao criar dataset: {e}")
         return dataset_name
 
@@ -122,7 +131,7 @@ def pull_prompt_from_langsmith(client: Client, prompt_name: str) -> ChatPromptTe
         # o risco é conhecido e aceito.
         prompt = client.pull_prompt(prompt_name, dangerously_pull_public_prompt=True)
 
-        print(f"   ✓ Prompt carregado com sucesso")
+        print("   ✓ Prompt carregado com sucesso")
         return prompt
 
     except Exception as e:
@@ -136,15 +145,15 @@ def pull_prompt_from_langsmith(client: Client, prompt_name: str) -> ChatPromptTe
             print("⚠️  O prompt não foi encontrado no LangSmith Hub.\n")
             print("AÇÕES NECESSÁRIAS:")
             print("1. Verifique se você já fez push do prompt otimizado:")
-            print(f"   python src/push_prompts.py")
+            print("   python src/push_prompts.py")
             print()
             print("2. Confirme se o prompt foi publicado com sucesso em:")
-            print(f"   https://smith.langchain.com/prompts")
+            print("   https://smith.langchain.com/prompts")
             print()
-            print(f"3. Confira se USERNAME_LANGSMITH_HUB no .env é o seu handle do Hub")
+            print("3. Confira se USERNAME_LANGSMITH_HUB no .env é o seu handle do Hub")
             print()
             print("4. Se você alterou o prompt no YAML, refaça o push:")
-            print(f"   python src/push_prompts.py")
+            print("   python src/push_prompts.py")
         else:
             print(f"Erro técnico: {e}\n")
             print("Verifique:")
@@ -174,7 +183,7 @@ def build_target(prompt_template: ChatPromptTemplate, llm: Any):
 
 def evaluate_all_metrics(
     inputs: dict, outputs: dict, reference_outputs: dict
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Avaliador do LangSmith: roda os três juízes uma única vez por exemplo e
     devolve as 5 métricas de uma vez.
@@ -278,7 +287,7 @@ def run_experiment(client: Client, prompt_name: str, dataset_name: str):
     return scores, results.url
 
 
-def display_results(prompt_name: str, scores: Dict[str, float]) -> bool:
+def display_results(prompt_name: str, scores: dict[str, float]) -> bool:
     print("\n" + "=" * 50)
     print(f"Prompt: {prompt_name}")
     print("=" * 50)
@@ -314,7 +323,7 @@ def display_results(prompt_name: str, scores: Dict[str, float]) -> bool:
     if passed:
         print(f"\n✅ STATUS: APROVADO - Todas as métricas >= {APPROVAL_THRESHOLD}")
     else:
-        print(f"\n❌ STATUS: REPROVADO")
+        print("\n❌ STATUS: REPROVADO")
         failed_metrics = [
             name for name, score in scores.items() if score < APPROVAL_THRESHOLD
         ]
@@ -399,7 +408,15 @@ def main():
                 }
             )
 
-        except Exception as e:
+        except (
+            LangSmithError,
+            LangChainException,
+            ChatGoogleGenerativeAIError,
+            OpenAIError,
+            GoogleAPIError,
+            ImportError,
+            ValueError,
+        ) as e:
             print(f"\n❌ Falha ao avaliar '{prompt_name}': {e}")
             all_passed = False
 

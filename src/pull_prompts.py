@@ -29,22 +29,71 @@ DICAS DE IMPLEMENTAÇÃO:
 - Use `save_yaml` de utils.py para gravar o resultado no arquivo .yml.
 """
 
-import os
 import sys
 from pathlib import Path
+
 from dotenv import load_dotenv
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 from langsmith import Client
-from utils import save_yaml, check_env_vars, print_section_header
+from langsmith.utils import LangSmithError
+
+from utils import check_env_vars, print_section_header, save_yaml
 
 load_dotenv()
 
 
-def pull_prompts_from_langsmith(): ...
+PROMPT_NAME = "leonanluppi/bug_to_user_story_v1"
+OUTPUT_PATH = (
+    Path(__file__).resolve().parent.parent / "prompts" / "bug_to_user_story_v1.yml"
+)
+
+
+def pull_prompts_from_langsmith() -> bool:
+    try:
+        prompt = Client().pull_prompt(PROMPT_NAME, dangerously_pull_public_prompt=True)
+        if (
+            not isinstance(prompt, ChatPromptTemplate)
+            or len(prompt.messages) != 2
+            or not isinstance(prompt.messages[0], SystemMessagePromptTemplate)
+            or not isinstance(prompt.messages[1], HumanMessagePromptTemplate)
+        ):
+            print("❌ Unsupported prompt message structure.")
+            return False
+
+        system_template, user_template = [message.prompt for message in prompt.messages]
+        if any(
+            template.template_format != "f-string"
+            or not isinstance(template.template, str)
+            or template.partial_variables
+            for template in (system_template, user_template)
+        ):
+            print("❌ Unsupported prompt message structure.")
+            return False
+
+        data = {
+            "bug_to_user_story_v1": {
+                "description": "Prompt pulled from the LangSmith Prompt Hub",
+                "system_prompt": system_template.template,
+                "user_prompt": user_template.template,
+                "version": "v1",
+            }
+        }
+        return save_yaml(data, str(OUTPUT_PATH))
+    except (LangSmithError, OSError, ValueError):
+        print("❌ Unable to pull the prompt from LangSmith or save it locally.")
+        return False
 
 
 def main():
     """Função principal"""
-    ...
+    print_section_header("PULL PROMPT FROM LANGSMITH")
+    if not check_env_vars(["LANGSMITH_API_KEY"]):
+        return 1
+    return 0 if pull_prompts_from_langsmith() else 1
 
 
 if __name__ == "__main__":

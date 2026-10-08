@@ -19,12 +19,17 @@ Configure o provider em LLM_PROVIDER e os modelos em LLM_MODEL / EVAL_MODEL,
 no arquivo .env, consultando a documentação oficial do provider escolhido.
 """
 
-import os
 import json
-import re
-from typing import Dict, Any
+import os
+from typing import Any
+
 from dotenv import load_dotenv
-from langchain_core.messages import SystemMessage, HumanMessage
+from google.genai.errors import APIError as GoogleAPIError
+from langchain_core.exceptions import LangChainException
+from langchain_core.messages import HumanMessage
+from langchain_google_genai.chat_models import ChatGoogleGenerativeAIError
+from openai import OpenAIError
+
 from utils import get_eval_llm
 
 load_dotenv()
@@ -38,7 +43,7 @@ def get_evaluator_llm():
     return get_eval_llm(temperature=0)
 
 
-def extract_json_from_response(response_text: str) -> Dict[str, Any]:
+def extract_json_from_response(response_text: str) -> dict[str, Any]:
     """
     Extrai JSON de uma resposta de LLM que pode conter texto adicional.
     """
@@ -62,7 +67,7 @@ def extract_json_from_response(response_text: str) -> Dict[str, Any]:
         return {"score": 0.0, "reasoning": "Erro ao processar resposta"}
 
 
-def evaluate_f1_score(question: str, answer: str, reference: str) -> Dict[str, Any]:
+def evaluate_f1_score(question: str, answer: str, reference: str) -> dict[str, Any]:
     """
     Calcula F1-Score usando LLM-as-Judge.
 
@@ -145,17 +150,25 @@ NÃO adicione nenhum texto antes ou depois do JSON.
             "reasoning": result.get("reasoning", ""),
         }
 
-    except Exception as e:
+    except (
+        LangChainException,
+        ChatGoogleGenerativeAIError,
+        OpenAIError,
+        GoogleAPIError,
+        ValueError,
+        TypeError,
+        ImportError,
+    ) as e:
         print(f"❌ Erro ao avaliar F1-Score: {e}")
         return {
             "score": 0.0,
             "precision": 0.0,
             "recall": 0.0,
-            "reasoning": f"Erro na avaliação: {str(e)}",
+            "reasoning": f"Erro na avaliação: {e!s}",
         }
 
 
-def evaluate_clarity(question: str, answer: str, reference: str) -> Dict[str, Any]:
+def evaluate_clarity(question: str, answer: str, reference: str) -> dict[str, Any]:
     """
     Avalia a clareza e estrutura da resposta usando LLM-as-Judge.
 
@@ -230,12 +243,20 @@ NÃO adicione nenhum texto antes ou depois do JSON.
 
         return {"score": round(score, 4), "reasoning": result.get("reasoning", "")}
 
-    except Exception as e:
+    except (
+        LangChainException,
+        ChatGoogleGenerativeAIError,
+        OpenAIError,
+        GoogleAPIError,
+        ValueError,
+        TypeError,
+        ImportError,
+    ) as e:
         print(f"❌ Erro ao avaliar Clarity: {e}")
-        return {"score": 0.0, "reasoning": f"Erro na avaliação: {str(e)}"}
+        return {"score": 0.0, "reasoning": f"Erro na avaliação: {e!s}"}
 
 
-def evaluate_precision(question: str, answer: str, reference: str) -> Dict[str, Any]:
+def evaluate_precision(question: str, answer: str, reference: str) -> dict[str, Any]:
     """
     Avalia a precisão da resposta usando LLM-as-Judge.
 
@@ -311,14 +332,22 @@ NÃO adicione nenhum texto antes ou depois do JSON.
 
         return {"score": round(score, 4), "reasoning": result.get("reasoning", "")}
 
-    except Exception as e:
+    except (
+        LangChainException,
+        ChatGoogleGenerativeAIError,
+        OpenAIError,
+        GoogleAPIError,
+        ValueError,
+        TypeError,
+        ImportError,
+    ) as e:
         print(f"❌ Erro ao avaliar Precision: {e}")
-        return {"score": 0.0, "reasoning": f"Erro na avaliação: {str(e)}"}
+        return {"score": 0.0, "reasoning": f"Erro na avaliação: {e!s}"}
 
 
 def evaluate_tone_score(
     bug_report: str, user_story: str, reference: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Avalia o tom da user story (profissional e empático).
 
@@ -392,14 +421,22 @@ NÃO adicione nenhum texto antes ou depois do JSON.
 
         return {"score": round(score, 4), "reasoning": result.get("reasoning", "")}
 
-    except Exception as e:
+    except (
+        LangChainException,
+        ChatGoogleGenerativeAIError,
+        OpenAIError,
+        GoogleAPIError,
+        ValueError,
+        TypeError,
+        ImportError,
+    ) as e:
         print(f"❌ Erro ao avaliar Tone Score: {e}")
-        return {"score": 0.0, "reasoning": f"Erro na avaliação: {str(e)}"}
+        return {"score": 0.0, "reasoning": f"Erro na avaliação: {e!s}"}
 
 
 def evaluate_acceptance_criteria_score(
     bug_report: str, user_story: str, reference: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Avalia a qualidade dos critérios de aceitação.
 
@@ -476,14 +513,22 @@ NÃO adicione nenhum texto antes ou depois do JSON.
 
         return {"score": round(score, 4), "reasoning": result.get("reasoning", "")}
 
-    except Exception as e:
+    except (
+        LangChainException,
+        ChatGoogleGenerativeAIError,
+        OpenAIError,
+        GoogleAPIError,
+        ValueError,
+        TypeError,
+        ImportError,
+    ) as e:
         print(f"❌ Erro ao avaliar Acceptance Criteria Score: {e}")
-        return {"score": 0.0, "reasoning": f"Erro na avaliação: {str(e)}"}
+        return {"score": 0.0, "reasoning": f"Erro na avaliação: {e!s}"}
 
 
 def evaluate_user_story_format_score(
     bug_report: str, user_story: str, reference: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Avalia se a user story segue o formato padrão correto.
 
@@ -562,14 +607,22 @@ NÃO adicione nenhum texto antes ou depois do JSON.
 
         return {"score": round(score, 4), "reasoning": result.get("reasoning", "")}
 
-    except Exception as e:
+    except (
+        LangChainException,
+        ChatGoogleGenerativeAIError,
+        OpenAIError,
+        GoogleAPIError,
+        ValueError,
+        TypeError,
+        ImportError,
+    ) as e:
         print(f"❌ Erro ao avaliar User Story Format Score: {e}")
-        return {"score": 0.0, "reasoning": f"Erro na avaliação: {str(e)}"}
+        return {"score": 0.0, "reasoning": f"Erro na avaliação: {e!s}"}
 
 
 def evaluate_completeness_score(
     bug_report: str, user_story: str, reference: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Avalia a completude da user story em relação ao bug.
 
@@ -658,9 +711,17 @@ NÃO adicione nenhum texto antes ou depois do JSON.
 
         return {"score": round(score, 4), "reasoning": result.get("reasoning", "")}
 
-    except Exception as e:
+    except (
+        LangChainException,
+        ChatGoogleGenerativeAIError,
+        OpenAIError,
+        GoogleAPIError,
+        ValueError,
+        TypeError,
+        ImportError,
+    ) as e:
         print(f"❌ Erro ao avaliar Completeness Score: {e}")
-        return {"score": 0.0, "reasoning": f"Erro na avaliação: {str(e)}"}
+        return {"score": 0.0, "reasoning": f"Erro na avaliação: {e!s}"}
 
 
 # Exemplo de uso e testes

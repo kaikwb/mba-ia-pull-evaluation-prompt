@@ -2,17 +2,18 @@
 Funções auxiliares para o projeto de otimização de prompts.
 """
 
-import os
-import yaml
 import json
-from typing import Dict, Any, Optional
+import os
 from pathlib import Path
+from typing import Any
+
+import yaml
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
-def load_yaml(file_path: str) -> Optional[Dict[str, Any]]:
+def load_yaml(file_path: str) -> dict[str, Any] | None:
     """
     Carrega arquivo YAML.
 
@@ -32,12 +33,12 @@ def load_yaml(file_path: str) -> Optional[Dict[str, Any]]:
     except yaml.YAMLError as e:
         print(f"❌ Erro ao parsear YAML: {e}")
         return None
-    except Exception as e:
+    except (OSError, UnicodeError) as e:
         print(f"❌ Erro ao carregar arquivo: {e}")
         return None
 
 
-def save_yaml(data: Dict[str, Any], file_path: str) -> bool:
+def save_yaml(data: dict[str, Any], file_path: str) -> bool:
     """
     Salva dados em arquivo YAML.
 
@@ -56,7 +57,7 @@ def save_yaml(data: Dict[str, Any], file_path: str) -> bool:
             yaml.dump(data, f, allow_unicode=True, sort_keys=False, indent=2)
 
         return True
-    except Exception as e:
+    except (OSError, UnicodeError, yaml.YAMLError) as e:
         print(f"❌ Erro ao salvar arquivo: {e}")
         return False
 
@@ -116,7 +117,7 @@ def print_section_header(title: str, char: str = "=", width: int = 50):
     print(char * width + "\n")
 
 
-def validate_prompt_structure(prompt_data: Dict[str, Any]) -> tuple[bool, list]:
+def validate_prompt_structure(prompt_data: dict[str, Any]) -> tuple[bool, list]:
     """
     Valida estrutura básica de um prompt.
 
@@ -149,7 +150,7 @@ def validate_prompt_structure(prompt_data: Dict[str, Any]) -> tuple[bool, list]:
     return (len(errors) == 0, errors)
 
 
-def extract_json_from_response(response_text: str) -> Optional[Dict[str, Any]]:
+def extract_json_from_response(response_text: str) -> dict[str, Any] | None:
     """
     Extrai JSON de uma resposta de LLM que pode conter texto adicional.
 
@@ -175,7 +176,7 @@ def extract_json_from_response(response_text: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-def get_llm(model: Optional[str] = None, temperature: float = 0.0):
+def get_llm(model: str | None = None, temperature: float = 0.0):
     """
     Retorna uma instância de LLM configurada baseada no provider.
 
