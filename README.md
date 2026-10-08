@@ -2,8 +2,6 @@
 
 Este projeto transforma relatos de bugs em user stories usando prompts versionados no LangSmith Prompt Hub e avalia as respostas em um dataset de 15 casos (5 simples, 7 médios e 3 complexos). O fluxo previsto é: baixar o prompt semente, manter a versão otimizada em YAML, publicá-la e executar avaliações rastreadas no LangSmith.
 
-> **Estado desta entrega:** há um YAML v2 e scripts/testes locais disponíveis no checkout, mas a avaliação ao vivo e as ações de publicação ainda não foram realizadas. Não há notas empíricas ou links de experimentos publicados neste README. Consulte [`docs/PENDING.md`](docs/PENDING.md) para as ações pendentes.
-
 ## Técnicas Aplicadas (Fase 2)
 
 ### Comparação entre v1 e v2
@@ -44,17 +42,37 @@ O YAML usa um esqueleto de resposta com **História de usuário** e **Critérios
 
 ## Resultados Finais
 
-**Ainda não há avaliação ao vivo concluída.** Portanto, não existem scores finais, URL pública de dataset/experimento ou capturas de tela para reportar. Nenhuma nota, aprovação, melhoria empírica ou iteração foi presumida. A tabela permanecerá vazia até execuções reais:
+### Execução registrada
 
-| Iteração | Provider / modelo de geração | Modelo avaliador | URL do experimento | Helpfulness | Correctness | F1-Score | Clarity | Precision | Média |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Não executada | — | — | — | — | — | — | — | — | — |
+O CLI registrou o resultado como **APROVADO**: as cinco métricas agregadas e a média geral atingiram o limite de `0.8`. A média reportada foi **0.8373 (83.73%)**, calculada pelo avaliador sobre os 15 exemplos.
 
-O critério do desafio exige que **cada uma das cinco métricas e a média** sejam pelo menos `0.8`. Planeje 3–5 iterações reproduzíveis: registre a configuração e URL de cada execução; examine os scores por exemplo, ajuste o YAML v2, publique novamente e rode a avaliação sobre o mesmo dataset. Não encerre apenas porque a média passou: o CLI mostra scores agregados, e uma média pode esconder casos ruins entre os 15 exemplos. Investigue no experimento do LangSmith cada caso abaixo do alvo e mantenha pelo menos três traces inspecionáveis.
+| Configuração | Resultado |
+| --- | --- |
+| Prompt | `kaikwb/bug_to_user_story_v2` |
+| Provider | Google (`google`) |
+| Modelo de geração e avaliação | `gemini-3.5-flash-lite` |
+| Exemplos avaliados | 15 |
+| Experimento | `kaikwb-bug_to_user_story_v2-95165b48` |
+
+| Métrica agregada | Score exibido | Limite |
+| --- | ---: | ---: |
+| Helpfulness | 0.85 | 0.80 |
+| Correctness | 0.83 | 0.80 |
+| F1-Score | 0.80 | 0.80 |
+| Clarity | 0.84 | 0.80 |
+| Precision | 0.86 | 0.80 |
+| Média geral | 0.8373 (83.73%) | 0.80 |
+
+Os scores das métricas nesta tabela, exibidos pelo CLI, são arredondados para duas casas decimais. A aprovação acima é a agregada reportada pelo CLI, não significa que cada exemplo atingiu `0.8`: por exemplo, o console mostra Clarity `0.50` no caso 3 e F1 `0.58` no caso 5. Inspecione os resultados por exemplo no experimento antes de concluir sobre esses casos.
+
+- Dataset público: [mba-ia-pull-evaluation-prompt-eval](https://smith.langchain.com/public/1aae3f05-e211-4adb-b5f5-5e769e982afd/d).
+- Experimento no workspace LangSmith (pode exigir acesso): [abrir resultados da execução](https://smith.langchain.com/o/f2be9b7e-b70e-4b08-8c85-50cb3a1353c4/datasets/11698a6e-d350-4165-9cad-06476b9a4016/compare?selectedSessions=670e9557-e014-468a-92b1-4633e18bc45c).
+
+O critério do desafio exige que **cada uma das cinco métricas agregadas e a média** sejam pelo menos `0.8`. Uma média pode esconder casos abaixo do alvo entre os 15 exemplos; examine esses casos e os traces no LangSmith. Este README registra uma execução; não documenta iterações comparativas nem capturas de tela.
 
 As métricas derivadas em `src/evaluate.py` são `Helpfulness = (Clarity + Precision) / 2` e `Correctness = (F1-Score + Precision) / 2`. `F1-Score` é estimado por um juiz LLM que avalia precision e recall em relação à referência e calcula `2 × (precision × recall) / (precision + recall)` (zero quando ambos são zero); não é uma métrica de sobreposição de tokens. Clarity e Precision também usam juízes LLM. A configuração do avaliador e do modelo de resposta é registrada nos metadados do experimento. A geração e os juízes solicitam temperatura zero, exceto para modelos Gemini identificados pela biblioteca como de amostragem fixa: nesses casos, o parâmetro é omitido e prevalecem os padrões do modelo.
 
-O link impresso pelo avaliador é do workspace e pode não ser público. Para obter uma URL pública dos dados/experimentos associados, compartilhe o dataset conscientemente depois das execuções. Isso é uma ação externa e não foi feita nesta entrega. Antes de publicar, verifique que não há relatos privados, dados pessoais ou segredos:
+O link do experimento é do workspace e pode exigir acesso. O dataset desta execução tem uma URL pública acima. Antes de compartilhar dados, verifique que não há relatos privados, dados pessoais ou segredos:
 
 ```python
 from dotenv import load_dotenv
@@ -67,7 +85,99 @@ dataset_name = f"{project_name}-eval"
 print(Client().share_dataset(dataset_name=dataset_name)["url"])
 ```
 
-Compartilhar o dataset não equivale a publicar o prompt no Hub, e a URL de experimento do workspace não é automaticamente pública. Compartilhe uma vez e guarde a URL: compartilhar novamente pode alterar o endereço. Adicione capturas reais em `docs/evidence/` (por exemplo, `docs/evidence/iteration-01.png` e `docs/evidence/traces-3-examples.png`) somente depois de criá-las; nenhum arquivo de evidência fictício foi adicionado.
+Compartilhar o dataset não equivale a publicar o prompt no Hub, e a URL de experimento do workspace não é automaticamente pública. Compartilhe uma vez e guarde a URL: compartilhar novamente pode alterar o endereço. Capturas de tela e traces como evidência visual não estão documentados neste README.
+
+<details>
+<summary>Log completo da avaliação</summary>
+
+```text
+uv run python src/evaluate.py
+
+==================================================
+AVALIAÇÃO DE PROMPTS OTIMIZADOS
+==================================================
+
+Provider: google
+Modelo Principal: gemini-3.5-flash-lite
+Modelo de Avaliação: gemini-3.5-flash-lite
+
+Criando dataset de avaliação: mba-ia-pull-evaluation-prompt-eval...
+   ✓ Carregados 15 exemplos do arquivo datasets/bug_to_user_story.jsonl
+   ✓ Dataset criado com 15 exemplos
+   ✓ https://smith.langchain.com/o/f2be9b7e-b70e-4b08-8c85-50cb3a1353c4/datasets/11698a6e-d350-4165-9cad-06476b9a4016
+
+======================================================================
+PROMPTS PARA AVALIAR
+======================================================================
+
+Este script irá puxar prompts do LangSmith Hub.
+Certifique-se de ter feito push dos prompts antes de avaliar:
+  python src/push_prompts.py
+
+
+🔍 Avaliando: kaikwb/bug_to_user_story_v2
+   Puxando prompt do LangSmith Hub: kaikwb/bug_to_user_story_v2
+   ✓ Prompt carregado com sucesso
+   Rodando experimento no LangSmith...
+View the evaluation results for experiment: 'kaikwb-bug_to_user_story_v2-95165b48' at:
+https://smith.langchain.com/o/f2be9b7e-b70e-4b08-8c85-50cb3a1353c4/datasets/11698a6e-d350-4165-9cad-06476b9a4016/compare?selectedSessions=670e9557-e014-468a-92b1-4633e18bc45c
+
+      [1] F1:0.92 Clarity:0.85 Precision:0.93
+      [2] F1:0.90 Clarity:0.82 Precision:0.95
+      [3] F1:0.92 Clarity:0.50 Precision:0.83
+      [4] F1:0.77 Clarity:0.90 Precision:0.83
+      [5] F1:0.58 Clarity:0.85 Precision:0.82
+      [6] F1:0.74 Clarity:0.88 Precision:0.82
+      [7] F1:0.87 Clarity:0.90 Precision:0.89
+      [8] F1:0.75 Clarity:0.85 Precision:0.83
+      [9] F1:0.65 Clarity:0.88 Precision:0.83
+      [10] F1:0.77 Clarity:0.90 Precision:0.83
+      [11] F1:0.82 Clarity:0.75 Precision:0.83
+      [12] F1:0.77 Clarity:0.85 Precision:0.83
+      [13] F1:0.87 Clarity:0.85 Precision:0.93
+      [14] F1:0.92 Clarity:0.95 Precision:0.93
+      [15] F1:0.79 Clarity:0.88 Precision:0.83
+
+==================================================
+Prompt: kaikwb/bug_to_user_story_v2
+==================================================
+
+Métricas Derivadas:
+  - Helpfulness: 0.85 ✓
+  - Correctness: 0.83 ✓
+
+Métricas Base:
+  - F1-Score: 0.80 ✓
+  - Clarity: 0.84 ✓
+  - Precision: 0.86 ✓
+
+--------------------------------------------------
+📊 MÉDIA GERAL: 0.8373
+--------------------------------------------------
+
+✅ STATUS: APROVADO - Todas as métricas >= 0.8
+
+==================================================
+RESUMO FINAL
+==================================================
+
+Prompts avaliados: 1
+Aprovados: 1
+Reprovados: 0
+
+Resultados no LangSmith (notas gravadas como feedback no experimento):
+  kaikwb/bug_to_user_story_v2
+    https://smith.langchain.com/o/f2be9b7e-b70e-4b08-8c85-50cb3a1353c4/datasets/11698a6e-d350-4165-9cad-06476b9a4016/compare?selectedSessions=670e9557-e014-468a-92b1-4633e18bc45c
+
+✅ Todos os prompts atingiram todas as métricas >= 0.8!
+
+Próximos passos:
+1. Documente o processo no README.md
+2. Capture screenshots das avaliações
+3. Faça commit e push para o GitHub
+```
+
+</details>
 
 ## Como Executar
 
@@ -114,7 +224,7 @@ Para executar apenas os testes dos scripts:
 pytest tests/test_prompt_scripts.py
 ```
 
-Execute os testes a partir da raiz. Testes locais não comprovam publicação no Hub nem scores de qualidade; essas verificações continuam pendentes.
+Execute os testes a partir da raiz. Testes locais validam a estrutura do prompt, não sua qualidade empírica; os resultados da avaliação estão registrados acima.
 
 ### Fluxo de pull, publicação e avaliação
 
@@ -137,6 +247,6 @@ python src/push_prompts.py
 python src/evaluate.py
 ```
 
-O avaliador espera variáveis completas no `.env`, publica/usa `{LANGSMITH_PROJECT}-eval`, avalia v2 nos 15 exemplos, registra feedback por exemplo e imprime médias e a URL do experimento. Cada chamada pode gerar consumo e/ou custo de API. Compare os cinco agregados e inspecione os 15 casos e traces na interface antes de registrar uma iteração ou alegar aprovação.
+O avaliador espera variáveis completas no `.env`, publica/usa `{LANGSMITH_PROJECT}-eval`, avalia v2 nos 15 exemplos, registra feedback por exemplo e imprime médias e a URL do experimento. Cada chamada pode gerar consumo e/ou custo de API. Compare os cinco agregados e inspecione os 15 casos e traces na interface ao documentar uma nova execução.
 
 Antes de qualquer publicação pública de prompt, dataset ou traces, remova/mascare informação privada, dados pessoais, credenciais e relatos de bugs confidenciais. Consulte [`docs/PENDING.md`](docs/PENDING.md) para o checklist de execução e evidências.
